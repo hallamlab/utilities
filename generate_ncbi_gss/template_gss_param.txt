@@ -1,0 +1,39 @@
+# NCBI GSS Parameter File
+# A parameter file to create valid NCBI GSS submission files.
+# As of May 2013, the preferred method of preparing fosmid end 
+# sequences for the NCBI
+# See: http://www.ncbi.nlm.nih.gov/dbGSS/how_to_submit.html
+
+# Publication (.pub)
+# REQUIRED
+# Title of the publication
+PUB_TITLE:A potential role for Marine Group A bacteria in the marine sulfur cycle
+PUB_AUTHORS:Name1,I.I.;Name2,I.
+PUB_JOURNAL:ISMEJ
+# Publication status 1=unpublished, 2=submitted, 3=in press, 4=published
+PUB_STATUS:X
+
+# OPTIONAL
+# Additional publication information
+PUB_VOLUME:XX
+PUB_ISSUE:X
+PUB_PAGES:XXX-XX
+PUB_YEAR:20XX
+
+# Library (.lib)
+# OPTIONAL
+# Library vector information
+LIB_VECTOR:pcc1fos
+LIB_V_TYPE:Fosmid
+LIB_DESCR:Fosmid paired end sequenced library, in pCC1fos vector produced using Copy Control Fosmid Library Production Kit (Epicentre), bidirectionally end sequenced on Sanger ABI PRISM3730
+
+# Contact (.cont)
+# REQUIRED
+CONT_NAME:Hallam, S.J.
+CONT_TEL:604 827 4216
+CONT_EMAIL:shallam@mail.ubc.ca
+CONT_LAB:Hallam
+CONT_INST:University of British Columbia
+CONT_ADDR:Life Sciences Institute, 2552-2350 Health Sciences Mall, Vancouver, B.C., V6T 1Z3
+
+
