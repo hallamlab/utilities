@@ -138,10 +138,10 @@ def get_directories(path):
 """
 Performs a variety of quality control steps on sequences.
 """
-def qc_sequence(input_seq, N=100, L_min=50, L_max=900, l=2, m=10, n=2, p=5):
+def qc_sequence(input_seq, N=100, L_min=100, L_max=900, l=2, m=10, n=0, p=5):
     
     # # trim ambiguous bases from head and tail N characters
-    input_seq = trim_ambig_head_tail(input_seq, N)
+    input_seq = trim_ambig_head_tail(input_seq, N) # trim ambiguous head and tail
     # # check if trimmed sequence in acceptable range
     if (len(input_seq) > L_max or len(input_seq) < L_min):
         print "Trimmed sequence not in accepted range: (L_min= " + str(L_min) + ", L_max= " + str(L_max) + ")"
@@ -151,9 +151,10 @@ def qc_sequence(input_seq, N=100, L_min=50, L_max=900, l=2, m=10, n=2, p=5):
         print "Trimmed sequence has too many ambiguous characters (not ATCG): (p= " + str(p) + ")"
         return None
     # # detects for acceptable amount of heterpolymers
-    if violate_hetero_polymers(input_seq, m, n, l):
+    if violate_hetero_polymers(input_seq, m, n, l, len(input_seq)):
         print "Sequence has too many hetero_polymers: (l, m, n) = (" + str(l) + ", " + str(m) + ", " + str(n) + " )"
         return None
+
     # sequence passed all qc checks
     return input_seq
 
@@ -203,7 +204,7 @@ n = the maximum number of violations per sequence
 """
 n_curr = 0 # global variable
 
-def violate_hetero_polymers(seq, m, n, l):
+def violate_hetero_polymers(seq, m, n, l, seq_len):
     repeat_hash = {} # keeps track of length l repeats and rangers
     global n_curr
     n_curr = 0 # number of current violations
@@ -214,14 +215,16 @@ def violate_hetero_polymers(seq, m, n, l):
         s = i - l
         if s < 0:
             s = 0
-        critical = update_keys(seq[s:i], repeat_hash, i, n, m)
+        critical = update_keys(seq[s:i], repeat_hash, i, n, m, seq_len)
         if critical == True:
             return True
     
     # one final pass to catch non-broken repeats near end
     for repeat in repeat_hash:
         arr = repeat_hash[repeat].split(":")
-        if check_violation(int(arr[0]), int(arr[1]), repeat, m):
+        if (int(arr[1]) - int(arr[0])) > round(seq_len*0.333):
+            return True
+        elif check_violation(int(arr[0]), int(arr[1]), repeat, m):
             n_curr += 1
             if n_curr > n:
                 # critical violation
@@ -236,7 +239,7 @@ Given a subsequence of a nucleotide string, sub_seq, function determines based o
 contents of the repeat_hash current number of violocations, n_curr, and 
 size of violation m, if a critical violation occurs in the current substring.
 """
-def update_keys(sub_seq, repeat_hash, curr_pos, n, m):
+def update_keys(sub_seq, repeat_hash, curr_pos, n, m, seq_len):
     global n_curr
     sub_len = len(sub_seq)
     if sub_len == 0:
@@ -263,7 +266,9 @@ def update_keys(sub_seq, repeat_hash, curr_pos, n, m):
             # range is contiguous
             repeat_hash[sub_window] = str(j) + ":" + str(p)
         else:
-            if check_violation(j,k,sub_window, m):
+            if (k-j) > round(seq_len*0.333):
+                return True # critical violation: repeat greater than 1/3 seq_len
+            elif check_violation(j,k,sub_window, m):
                 n_curr += 1
                 if n_curr > n:
                     # critical violation
@@ -345,27 +350,27 @@ def handle_fasta_files(fasta_files,opts,plc_options=None):
 """
 Create PLC option file
 """    
-def generate_plc_file(fasta_files, plc_option_file):
+def generate_plc_file(fasta_files, plc_option_file, output_folder):
     plc_options = {}
-    # open the output file (one per input fasta)
+    # open the plc option file (one per input fasta)
     try:
         myplc_file = open(plc_option_file,'r')
     except IOError:
-        print "Cannot open " + str(output_file)
-        exit()
-    
+       print "Cannot open " + str(output_file)
+       exit()
     lines = myplc_file.readlines()
     myplc_file.close()
     plc_pattern = re.compile(r'((PUB.*?|LIB.*?|CONT.+?).*?):(.*$)')
-    
+    # TODO split this up into three files
     for line in lines:
         hits = plc_pattern.search(line)
         if hits:
             plc_options[hits.group(1).strip()] = hits.group(3).strip()
             
-    plc_output = open(plc_option_file + ".plc.txt", "w")
+   
     # create plc file
     # Publication (.pub)
+    plc_out_pub = open(output_folder + ".pub", "w")
     pub = "TYPE: Pub" + "\n"
     pub += "TITLE: " + plc_options["PUB_TITLE"] + "\n"
     pub += "AUTHORS: " + plc_options["PUB_AUTHORS"] + "\n"
@@ -377,9 +382,11 @@ def generate_plc_file(fasta_files, plc_option_file):
     pub += "STATUS: " + plc_options["PUB_STATUS"] + "\n"
     pub += "||" + "\n" + "\n"
     
-    plc_output.write(pub)
+    plc_out_pub.write(pub)
+    plc_out_pub.close()
     
     # Library (.lib)
+    plc_out_lib = open(output_folder + ".lib", "w")
     for fasta_file in fasta_files:
         lib = ""
         library = re.sub("\.(fa|fas|fasta|fna|f)$","", fasta_file)
@@ -390,9 +397,11 @@ def generate_plc_file(fasta_files, plc_option_file):
         lib += "DESCR: " + plc_options["LIB_DESCR"] + "\n" 
         lib += "||" + "\n" + "\n"
         
-        plc_output.write(lib)
+        plc_out_lib.write(lib)
+    plc_out_lib.close()
         
     # Contact (.cont)
+    plc_out_cont = open(output_folder + ".cont", "w")
     cont = "TYPE: Cont" + "\n"
     cont += "NAME: " + plc_options["CONT_NAME"] + "\n"
     cont += "TEL: " + plc_options["CONT_TEL"] + "\n"
@@ -402,8 +411,8 @@ def generate_plc_file(fasta_files, plc_option_file):
     cont += "ADDR: " + plc_options["CONT_ADDR"] + "\n"
     cont += "||" + "\n" + "\n"
     
-    plc_output.write(cont)
-    plc_output.close()
+    plc_out_cont.write(cont)
+    plc_out_cont.close()
     return plc_options
 
 
@@ -417,25 +426,26 @@ def main(argv):
     
     fasta_files = [] # list of fasta_files
     
+    output_folder = opts.output_file
+    
     # get rid of all non-fasta files by suffex
-    for file in get_files(opts.fasta_dir):
-        if re.search("\.(fa|fas|fasta|fna|f|faa)$", file):
+    for f in get_files(opts.fasta_dir):
+        if re.search("\.(fa|fas|fasta|fna|f|faa)$", f):
             # file is fasta
-            fasta_files.append(file)
+            fasta_files.append(f)
         else:
-            print "Warning " + file + " skipped file -- non-regular (.fa,.fas,.fasta,.fna,faa) suffix"
+            print "Warning: " + "skipped file " + f + " -- non-regular (.fa,.fas,.fasta,.fna,faa) suffix"
     
-    # generate companion plc filed
+    # generate companion plc file
     if opts.parameter_file != None:
-        plc_options = generate_plc_file(fasta_files, opts.parameter_file)
+        plc_options = generate_plc_file(fasta_files, opts.parameter_file, output_folder)
     
-    # handle fastafiles file and create gcc files
-    handle_fasta_files(fasta_files,opts, plc_options)
+    # handle fasta files and create gcc files in current directory
+    handle_fasta_files(fasta_files, opts, plc_options)
 
 
 # call the main function with command line argument vector
 if __name__ == "__main__":
     main(sys.argv[1:])
-
 
 
