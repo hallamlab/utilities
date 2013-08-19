@@ -1,9 +1,8 @@
 #!/usr/bin/python
 """
-do_something_script.py
 
-Created by Niels Hanson on 2013-04-21.
-Copyright (c) 2013 __MyCompanyName__. All rights reserved.
+Created by Kan Cheung on 2013-08-18.
+Copyright (c) 2013 Steven J. Hallam Laboratory. All rights reserved.
 """
 
 # load some packages
@@ -21,14 +20,13 @@ except:
 
 
 what_i_do = """ This script converts NCBI Genome Survey Sequences files (.gss) files to .fasta files by 
-extracting all the sequences
-"""
+extracting all the sequences """
 parser = argparse.ArgumentParser(description=what_i_do)
 # add arguments to the parser
 parser.add_argument('-i', dest='input_files', type=str, nargs='+',
-                required=True, help='a selection of input files (required)', default=None)
-parser.add_argument('-o', dest='output_files', type=str, nargs='?',
-               required=True, help='the output file (required)', default=None)
+                required=True, help='a selection of .gss input files (required)', default=None)
+parser.add_argument('-o', dest='output_file', type=str, nargs='?',
+               required=True, help='the output file format .fasta (required)', default=None)
  
 """
 Helper function to get directories from a given path
@@ -40,27 +38,6 @@ def get_directories(path):
             ret.append(f.strip())
     return ret
     
-def process_input_file(input_file):
-    # lets do our checks
-    # print "In process_input_file()"
-    if (input_file == None) or ( not isinstance(input_file, str)) or len(input_file) == 0:
-        print "some problems with the arguments"
-        return -1
-    else:
-        # okay there's something there we'll try to open it
-        try:
-            print "open " + input_file
-            myinput = open(input_file,'r')
-        except IOError:
-            print "Cannot open " + str(input_file)
-            exit()
-        
-        header = myinput.readline().strip("\n").split(",")
-        data_matrix = {}
-        
-        myinput.close() # always close your files
-        print "closed file " + input_file
-
 """
 Check the arguments given
 """
@@ -70,7 +47,11 @@ def check_arguments(arguments):
             open(file)
         except IOError:
             print "Could not open " + file
-            sys.exit(1)
+            sys.exit(1) 
+    if arguments.input_files == None:
+        print """REQUIRED: You must provide a directory of .gss files"""
+    if arguments.input_files == None:
+        print """REQUIRED: You must have an output file."""
     
 def write_to_csv(counted_dictionary, taxa_list, output_file_name):
 
@@ -122,9 +103,10 @@ def gss_to_fasta(input_files):
         handle = open(i, "r")
         lines = handle.readlines()
         handle.close()
-        
+
+
         # open output file
-        out_handle = open(i + ".fasta", "w")
+        out_handle = open(i.replace(".gss", "") + ".fasta", "w")
         
         # header for each sequence and variables for current sequence
         fasta_header = ""
@@ -146,8 +128,11 @@ def gss_to_fasta(input_files):
                 current_sequence = current_sequence + "\n"
                 out_handle.write(current_sequence)
                 current_sequence = []
+                i.replace(".gss", ".fasta")
             if collect:
                 current_sequence.append(j)
+                
+                
                 
         out_handle.close()        
                 
