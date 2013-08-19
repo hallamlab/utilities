@@ -2,8 +2,8 @@
 """
 do_something_script.py
 
-Created by Niels Hanson on 2013-04-21.
-Copyright (c) 2013 __MyCompanyName__. All rights reserved.
+Created by Niels Hanson on 2013-08-16.
+Copyright (c) 2013 Steven J. Hallam Laboratory. All rights reserved.
 """
 
 # load some packages
