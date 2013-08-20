@@ -25,8 +25,8 @@ parser = argparse.ArgumentParser(description=what_i_do)
 # add arguments to the parser
 parser.add_argument('-i', dest='input_files', type=str, nargs='+',
                 required=True, help='a selection of .gss input files (required)', default=None)
-parser.add_argument('-o', dest='output_file', type=str, nargs='?',
-               required=True, help='the output file format .fasta (required)', default=None)
+parser.add_argument('-o', dest='output_dir', type=str, nargs='?',
+               required=True, help='the target output directory (required)', default=None)
  
 """
 Helper function to get directories from a given path
@@ -47,11 +47,12 @@ def check_arguments(arguments):
             open(file)
         except IOError:
             print "Could not open " + file
+            print "WARNING: <file> does not end in .gss"
             sys.exit(1) 
     if arguments.input_files == None:
-        print """REQUIRED: You must provide a directory of .gss files"""
+        print """REQUIRED: You must have at least one input file"""
     if arguments.input_files == None:
-        print """REQUIRED: You must have an output file."""
+        print """REQUIRED: You must have an output file"""
     
 def write_to_csv(counted_dictionary, taxa_list, output_file_name):
 
