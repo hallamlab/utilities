@@ -265,12 +265,12 @@ def create_database(in_fasta, exe, out_folder):
    
 
 def blast(exe, query, database):
-    print "in_blast"
     query_name =  re.sub(r'\..*', '',query.split("/")[-1]) 
     db_name =  re.sub(r'\..*', '',database.split("/")[-1]) 
     out_name = query_name + "_" + db_name + ".blastout"
-    cmd = '%s -query %s -db %s -outfmt 6 -perc_identity %s -out %s' %(exe, query, database, str(80), out_name)
+    cmd = '%s -query %s -db %s -outfmt 6 -perc_identity %s -out %s' %(exe, query, database, str(95), out_name)
     result= getstatusoutput(cmd)
+    return out_name
     
 # helper function to get directories from a given path
 def get_directories(path):
@@ -287,6 +287,40 @@ def get_files(path):
             ret.append(f.strip())
     return ret
 
+def remove_primer_sequences(fasta_to_blastout):
+    print "in remove_primer_sequences"
+    for fasta in fasta_to_blastout:
+        try:
+            blast_handle = open(fasta_to_blastout[fasta], 'r')
+        except IOError:
+            print "Cannot open blastout file " + blastout
+        
+        lines = blast_handle.readlines()
+        # "2014613006	pCC1FOS	100.00	953	0	0	464	1416	126	1078	0.0	1760"
+        # pull out the hits
+        targets = {}
+        for line in lines:
+            splits = line.split("\t")
+            q_seq = splits[0].strip()
+            q_start = splits[6].strip()
+            q_end = splits[7].strip()
+            targets[q_seq] = {'start': q_start, 'end':q_end}
+        print targets
+        # find targets in fasta
+        reader = FastaReader(fasta)
+        for record in reader:
+            name = record.name.replace(">", "")
+            seq = record.sequence
+            if name in targets:
+                print name
+                print seq
+                i = int(targets[name]['start'])-1
+                j = int(targets[name]['end'])
+                seq = seq[:i] + 'X'*(j-i) + seq[j:]
+        
+        
+    exit()
+
 # the main function
 SIZE = 1000
 
@@ -302,7 +336,7 @@ def main(argv):
    blast_executable = args['blast_executable']
    database_executable = args['database_executable']
    
-   # temporary folder for blastdb
+   # create temporary folder for blastdb
    temp_blast_db = os.path.abspath("temp_blast_db")
    if not os.path.exists(temp_blast_db): 
        os.makedirs(temp_blast_db)
@@ -315,12 +349,6 @@ def main(argv):
    blast_executable = blast_executable
    database_executable = database_executable
    
-   print input_fastas
-   print output_directory
-   print remove_me_fasta
-   print blast_executable
-   print database_executable
-   
    # create the remove_me_database
    create_database(remove_me_fasta, database_executable, temp_blast_db)
    
@@ -329,17 +357,21 @@ def main(argv):
    database_location = temp_blast_db + '/' + db_name
    
    # for each input fasta file, blast against the target database
+   fasta_to_blastout = {}
    for i in input_fastas:
-       blast(blast_executable, i,database_location)
+       blastout_file = blast(blast_executable, i,database_location)
+       # pair fasta with blastout file
+       fasta_to_blastout[i] = os.path.abspath(blastout_file)
    
-   # process .blastout_files
-   
-   
+   # remove significant sequences
+   print fasta_to_blastout
+   remove_primer_sequences(fasta_to_blastout)
+   exit()
    # remove .blastout_files
-   blastout_files = get_files(".")
    for f in blastout_files:
-       if re.match('.*\.blastout',f):
-           os.remove(os.path.abspath(f))
+       os.remove(os.path.abspath(f))
+   
+   
    # remove temp_blast_db directory
    temp_files = get_files(temp_blast_db)
    for f in temp_files:
