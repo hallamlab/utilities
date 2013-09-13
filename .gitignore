@@ -24,6 +24,10 @@
 *.tar
 *.zip
 
+# Large or Personal Files
+#############
+fosmid_qc/test_data/
+
 # Logs and databases #
 ######################
 *.log
