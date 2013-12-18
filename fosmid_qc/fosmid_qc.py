@@ -43,7 +43,7 @@ parser.add_argument('-b', dest='blast_executable', type=str, nargs='?',
 parser.add_argument('-f', dest='database_executable', type=str, nargs='?',
                 required=False, help='location of the makeblastdb executable, will assume in PATH if not specified', default='makeblastdb')
 parser.add_argument('-n', dest='naming_file', type=str, nargs='?',
-                required=False, help='name mapping file linking Library_Name, Library FullName, and External_Identifier', default='makeblastdb')
+                required=False, help='name mapping file linking Library_Name, Library FullName, and External_Identifier', default=None)
 parser.add_argument('-e', dest='fosmid_ends', type=str, nargs='+',
                 required=True, help='location of the directory of fosmid_end fasta files for naming', default=None)                                  
                
@@ -126,8 +126,6 @@ class FastaReader():
         self.seqname = self.name
 
         return FastaRecord(self.name, self.sequence)
-
-
 
 
 def create_database(in_fasta, exe, out_folder):
@@ -253,11 +251,11 @@ def remove_primer_sequences(fasta_to_blastout, length_cutoff = 500):
                     if l > 20 and l < fosmid_lengths[fasta][name]:
                         # non-trival hit
                         # replace with X's
-                        qc_seq = qc_seq[:i] + 'X'*(j-i) + qc_seq[j:]
+                        qc_seq = qc_seq[:i] + 'N'*(j-i) + qc_seq[j:]
                         
                         
                 
-                seq = qc_seq.strip('X') # remove end hits
+                seq = qc_seq.strip('N') # remove end hits
             if len(seq) > length_cutoff:
                 fasta_handle.write(">" + name + "\n")
                 fasta_handle.write(seq + "\n")
@@ -323,10 +321,10 @@ def identify_fosmid_matches(foz_to_end_blastout):
             blast_hits = {}
             
             # convenience function to add hits
-            def add_to_blast_hits():
+            def add_to_blast_hits(fields):
                 if query not in blast_hits:
                     blast_hits[query] = {}
-        
+            
                 dot_hits = dot_pattern.match(fields[1])
                 if dot_hits:
                     lib = dot_hits.group(1)
@@ -337,9 +335,21 @@ def identify_fosmid_matches(foz_to_end_blastout):
                     well = tail_hits.group(1)
                 hit = lib + well
                 if hit not in blast_hits[query]:
-                    blast_hits[query][hit] = []
+                    blast_hits[query][hit] = {}
                 if forward_backward not in blast_hits[query][hit]:
-                    blast_hits[query][hit].append(forward_backward)
+                    blast_hits[query][hit][forward_backward] = []
+                b_result = { "query": fields[0].strip(), 
+                             "target": fields[1].strip(), 
+                             "fb": forward_backward, 
+                             "percent_sim": fields[2].strip(),
+                             "a_length": fields[3].strip(), 
+                             "q_start": int(fields[6].strip()),
+                             "q_stop": int(fields[7].strip()),
+                             "t_start": int(fields[8].strip()),
+                             "t_stop": int(fields[9].strip()),
+                             "score": int(fields[11].strip()),
+                             "eval": fields[10].strip() }
+                blast_hits[query][hit][forward_backward].append(b_result)
             
             for l in lines:
                 fields = l.split("\t")
@@ -351,26 +361,26 @@ def identify_fosmid_matches(foz_to_end_blastout):
                 if q_start < q_end:
                     # forward
                     if q_start < 10 or q_end > length:
-                        add_to_blast_hits()
+                        add_to_blast_hits(fields)
                 else:
                     # backward
                     if q_end < 10 or q_start > length:
-                        add_to_blast_hits()
-                    
+                        add_to_blast_hits(fields)
             
-            for i in blast_hits:
-                for k in blast_hits[i]:
-                    if len(blast_hits[i][k]) > 1:
-                        # smoking gun
-                        if f not in final_mapping:
-                            final_mapping[f] = {}
-                        if i not in final_mapping[f]:
-                            final_mapping[f][i] = []
-                        final_mapping[f][i].append(k)
-    
+            if f not in final_mapping:
+                final_mapping[f] = {}
+            # collect all blast_hits
+            for hit in blast_hits:
+                if hit not in final_mapping[f]:
+                    final_mapping[f][hit] = {}
+                for k in blast_hits[hit]:
+                    if k not in final_mapping[f][hit]:
+                        final_mapping[f][hit][k] = {}
+                    for l in blast_hits[hit][k]:
+                        final_mapping[f][hit][k][l] = blast_hits[hit][k][l]
     return final_mapping
     
-def rename_writeout_fosmids(final_mapping):
+def rename_writeout_fosmids(rename_mapping, decomplex=True):
     # find targets in fasta
     
     org_fastas = get_files(temp_fasta_dir)
@@ -386,15 +396,107 @@ def rename_writeout_fosmids(final_mapping):
         for record in reader:
             name = record.name.replace(">", "")
             seq = record.sequence
-            if (fasta in final_mapping) and (name in final_mapping[fasta]):
-                new_name = ""
-                for end in final_mapping[fasta][name]:
-                    new_name = new_name + "_" + end
-                    
-                name = new_name
+            if (fasta in rename_mapping) and (name in rename_mapping[fasta]):
+                if len(rename_mapping[fasta][name]) > 0:
+                    # it has a new name
+                    new_name = rename_mapping[fasta][name]
+                    name = "_".join(new_name)
+                    # mels output of separating all found fosmids in their own file
+                    if decomplex == True:
+                        try:
+                            t_fasta_out = fasta_out
+                            mels_fasta = open(output_dir + sep + t_fasta_out + "." + name + ".fasta", "w")
+                        except:
+                            "Problem opening fasta file"
+                        mels_fasta.write(">" + name + "\n")
+                        mels_fasta.write(seq + "\n")
+                
             fasta_handle.write(">" + name + "\n")
             fasta_handle.write(seq + "\n")
         fasta_handle.close()
+
+def all_fosmidqc_report(final_mapping):
+   results_handle = open(output_dir + sep + "all_fosmidqc_report" + ".txt", "w")
+   line = ""
+   line = "Fosmid QC Final Results:"
+   print line
+   results_handle.write(line + "\n")
+   for f in xout_lengths:
+       line = str(f) 
+       f_temp = re.match("^(.*?)-",f)
+       if f_temp:
+           f_temp = f_temp.group(1)
+           if f_temp in lib_name_maps['library_name_to_external']:
+               line = line + " (" + str(lib_name_maps['library_name_to_external'][f_temp]) + ")"
+       line = line + " (" + str(len(xout_lengths[f])) + " sequence(s)):" 
+       print line
+       results_handle.write(line + "\n")
+       for n in xout_lengths[f]:
+           if len(xout_lengths[f]) > 1:
+               # multiple fosmids print all hits
+               line = ">" + str(n) + " ( " + str(xout_lengths[f][n]) + " nts ):"
+               print line
+               results_handle.write(line + "\n")
+               if n not in final_mapping[f]:
+                   line = "\tNo Hits"
+                   print line
+                   results_handle.write(line + "\n")
+               else:
+                   for e in final_mapping[f][n]:
+                       line = "\t" + str(e)
+                       print line
+                       results_handle.write(line + "\n")
+                       for r in final_mapping[f][n][e]:
+                           line = "\t\t" + str(r)
+                           print line
+                           results_handle.write(line + "\n")
+                           for j in final_mapping[f][n][e][r]:
+                               line = "\t\t\t" + "(" + str(j["query"]) + "," + str(j["target"]) + "): " + " Length:" + str(j["a_length"]) + " Percent: " +  str(j["percent_sim"]) + " " + str(j["q_start"]) + "-" + str(j["q_stop"])
+                               print line
+                               results_handle.write(line + "\n")
+           else:
+               # only one fosmid
+
+               line = ">" + str(n) + "( " + str(xout_lengths[f][n]) + " nts ):"
+               print line
+               results_handle.write(line + "\n")
+               if n not in final_mapping[f]:
+                   line = "\tNo Hits"
+                   print line
+                   results_handle.write(line + "\n")
+               else:
+                   for e in final_mapping[f][n]:
+                       if len(final_mapping[f][n][e]) > 1:
+                           line = "\t" + str(e)
+                           print line
+                           results_handle.write(line + "\n")
+                           for r in final_mapping[f][n][e]:
+                               line = "\t\t" + str(r)
+                               print line
+                               results_handle.write(line + "\n")
+                               for j in final_mapping[f][n][e][r]:
+                                   line = "\t\t\t" + "(" + str(j["query"]) + "," + str(j["target"]) + "): " + " Length:" + str(j["a_length"]) + " Percent:" + str(j["percent_sim"]) + " " + str(j["q_start"]) + "-" + str(j["q_stop"])
+                                   print line
+                                   results_handle.write(line + "\n")
+                       elif len(final_mapping[f][n][e]) == 1:
+                           line = "\t" + str(e)
+                           print line
+                           results_handle.write(line + "\n")
+                           line = "\t**Only one hit**"
+                           print line
+                           results_handle.write(line + "\n")
+                           for r in final_mapping[f][n][e]:
+                               line = "\t\t" + str(r)
+                               print line
+                               results_handle.write(line + "\n")
+                               for j in final_mapping[f][n][e][r]:
+                                   line = "\t\t\t" + "(" + str(j["query"]) + "," + str(j["target"]) + "): " + " Length:" + str(j["a_length"]) + str(" Percent:") + str(j["percent_sim"]) + " " + str(j["q_start"]) + "-" +  str(j["q_stop"])
+                                   print line
+                                   results_handle.write(line + "\n")
+   
+   results_handle.close()
+    
+
 
 def main(argv): 
    args = vars(parser.parse_args())
@@ -422,8 +524,9 @@ def main(argv):
    remove_me_fasta = args['remove_me_fasta']
    blast_exe = args['blast_executable']
    blast_db_exe = args['database_executable']
-   naming_file_dir = os.path.dirname(args['naming_file'])
-   naming_file = args['naming_file']
+   if args['naming_file']:
+       naming_file_dir = os.path.dirname(args['naming_file'])
+       naming_file = args['naming_file']
    fosmid_end_dir = os.path.dirname(args['fosmid_ends'][0])
    fosmid_ends = paths_to_filenames(args['fosmid_ends'])
    output_dir = args['output_directory']
@@ -444,8 +547,9 @@ def main(argv):
        fosmid_lengths[f] = fasta_lengths(input_dir + sep + f)   
    
    # parse the global lib name mapping file
-   global lib_name_maps
-   lib_name_maps = parse_naming_file(naming_file)
+   if args['naming_file']:       
+       global lib_name_maps
+       lib_name_maps = parse_naming_file(naming_file)
    
    # create the remove_me_database
    xout_db_location = create_database(remove_me_fasta, blast_db_exe, temp_blastdb_dir)
@@ -467,6 +571,7 @@ def main(argv):
    # get all xout files
    global xout_lengths
    xout_files = get_files(temp_fasta_dir)
+   
    for x_file in xout_files:
        if x_file not in xout_lengths:
            xout_lengths[x_file] = {}
@@ -486,28 +591,89 @@ def main(argv):
        for f_end in fosmid_ends:
            if f_end not in foz_to_end_blastout[qc_file]:
                foz_to_end_blastout[qc_file][f_end] = {}
-           blastout_file = blast(blast_exe, temp_fasta_dir + sep + qc_file, f_end_to_db_loc[f_end], 98, temp_blastout_dir)
+           blastout_file = blast(blast_exe, temp_fasta_dir + sep + qc_file, f_end_to_db_loc[f_end], 95, temp_blastout_dir)
            foz_to_end_blastout[qc_file][f_end] = blastout_file
    
-   # print foz_to_end_blastout
+   
    final_mapping = identify_fosmid_matches(foz_to_end_blastout)
    
-   # create qc_fosmids
-   rename_writeout_fosmids(final_mapping)
+   all_fosmidqc_report(final_mapping)
    
-   # print final results
-   print "Final Mapping:"
-   for f in final_mapping:
-       print f
-       for r in final_mapping[f]:
-           print "\t" + ">" +  r
-           for e in final_mapping[f][r]:
-               print "\t\t" + e
+   rename_mapping = {}
+   
+   fb_handle = open(output_dir + sep + "fosmidqc_mapping_report" + ".txt", "w")
+   
+   line = ""
+   line = "Fosmid QC Forward-Backward Hit Mapping:"
+   print line
+   fb_handle.write(line + "\n")
+   count = 0
+   for i in xout_lengths:
+       line = i
+       f_temp = re.match("^(.*?)-",i)
+       if f_temp:
+          f_temp = f_temp.group(1)
+          print f_temp
+          if f_temp in lib_name_maps['library_name_to_external']:
+              line = line + " (" + str(lib_name_maps['library_name_to_external'][f_temp]) + ")"
+       print line
+       fb_handle.write(line + "\n")
+       if i not in rename_mapping:
+           rename_mapping[i] = {}
+       for j in xout_lengths[i]:
+           if j not in rename_mapping[i]:
+               rename_mapping[i][j] = []
+           if j in final_mapping[i]:
+               for k in final_mapping[i][j]:
+                   if len(final_mapping[i][j][k]) > 1:
+                       # found both ends append to list
+                       rename_mapping[i][j].append(k)
+           # print mapping
+           if len(rename_mapping[i][j]) > 0:
+               line = "\t" + ">" + str(j) + " --> " + str(rename_mapping[i][j])
+               print line
+               fb_handle.write(line + "\n")
+               count += 1
+           else:
+               line = "\t" + ">" + str(j) + " --> " + "None"
+               print line
+   
+   fb_handle.close()
+   # create qc_fosmids
+   rename_writeout_fosmids(rename_mapping)
+   
+   manual_aid = open(output_dir + sep + "fosmidqc_manual_aid_report" + ".txt", "w")
+   line = "Fosmid QC Manual Aid Report:"
+   rename_mapping = {}
+   manual_aid.write(line + "\n")
+   for i in xout_lengths:
+       if i not in rename_mapping:
+           rename_mapping[i] = {}
+       for j in xout_lengths[i]:
+          if j not in rename_mapping[i]:
+              rename_mapping[i][j] = []
+          if j in final_mapping[i]:
+              for k in final_mapping[i][j]:
+                  if len(final_mapping[i][j][k]) == 1:
+                      # found both ends append to list
+                      rename_mapping[i][j].append(k)
+          # # print mapping
+          # if len(rename_mapping[i][j]) > 1:
+          #     line = "\t" + ">" + str(j) + " --> " + str(rename_mapping[i][j])
+   
+   for i in rename_mapping:
+       for j in rename_mapping[i]:
+           if len(rename_mapping[i][j]) > 0:
+               line = str(i) + " >" + str(j) + " " + str(rename_mapping[i][j])
+               manual_aid.write(line + "\n")
+   manual_aid.close()
+   
+   print str(count) + " Fosmid sequence(s) Forward-Backward Hit mapped."
    
    # remove temporary directories
    for i in temp_dirs:
-       clean_dir(i)
-       os.removedirs(i)
+      clean_dir(i)
+      os.removedirs(i)
    
    exit()
    
