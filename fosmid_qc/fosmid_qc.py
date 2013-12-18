@@ -33,19 +33,21 @@ what_i_do = "Fosmid Quality Control. Removes vector sequences and annotates with
 parser = argparse.ArgumentParser(description=what_i_do)
 # add arguments to the parser
 parser.add_argument('-i', dest='input_fastas', type=str, nargs='+',
-                required=True, help='a selection of one or many input .fasta files (required)', default=None)
-parser.add_argument('-d', dest='remove_me_fasta', type=str, nargs='?',
-                required=True, help='a fasta file containing sequences to find and remove from input fastas (required)', default=None)                
+                required=True, help='a selection of one or many fosmid input .fasta files (required)', default=None)             
 parser.add_argument('-o', dest='output_directory', type=str, nargs='?',
                 required=True, help='the name a target output directory (required)', default=None)
+parser.add_argument('-d', dest='remove_me_fasta', type=str, nargs='?',
+                required=True, help='a fasta file containing sequences to find and remove from input (required)', default=None)
+parser.add_argument('-e', dest='fosmid_ends', type=str, nargs='+',
+                required=True, help='location of the directory of fosmid-end fasta files for naming (required)', default=None)
+parser.add_argument('-n', dest='naming_file', type=str, nargs='?',
+                required=False, help='name mapping file linking Library_Name, Library FullName, and External_Identifier', default=None)
+parser.add_argument('-p', dest='percent_id', type=str, nargs='?',
+                required=False, help='minimum percent identity cutoff for blast homology searches (default 98)', default='98')
 parser.add_argument('-b', dest='blast_executable', type=str, nargs='?',
                 required=False, help='location of the blastn executable, will assume in PATH if not specified', default='blastn')
 parser.add_argument('-f', dest='database_executable', type=str, nargs='?',
-                required=False, help='location of the makeblastdb executable, will assume in PATH if not specified', default='makeblastdb')
-parser.add_argument('-n', dest='naming_file', type=str, nargs='?',
-                required=False, help='name mapping file linking Library_Name, Library FullName, and External_Identifier', default=None)
-parser.add_argument('-e', dest='fosmid_ends', type=str, nargs='+',
-                required=True, help='location of the directory of fosmid_end fasta files for naming', default=None)                                  
+                required=False, help='location of the makeblastdb executable, will assume in PATH if not specified', default='makeblastdb')                               
                
 def check_arguments(args):
    if args['input_fastas'] == None or args['output_directory'] == None or args['remove_me_fasta'] == None:
@@ -530,6 +532,7 @@ def main(argv):
    fosmid_end_dir = os.path.dirname(args['fosmid_ends'][0])
    fosmid_ends = paths_to_filenames(args['fosmid_ends'])
    output_dir = args['output_directory']
+   percent_id = args['percent_id']
    
    # create directories if they don't exist
    temp_dirs = [temp_blastdb_dir, temp_blastout_dir, temp_fasta_dir]
@@ -557,7 +560,7 @@ def main(argv):
    # for each input fasta file, blast against the target database
    fasta_to_blastout_remove = {}
    for f in input_fastas:
-       blastout_file = blast(blast_exe, input_dir + sep + f, xout_db_location, 98, temp_blastout_dir)
+       blastout_file = blast(blast_exe, input_dir + sep + f, xout_db_location, percent_id, temp_blastout_dir)
        # pair fasta with blastout file
        fasta_to_blastout_remove[f] = blastout_file
    
@@ -591,7 +594,7 @@ def main(argv):
        for f_end in fosmid_ends:
            if f_end not in foz_to_end_blastout[qc_file]:
                foz_to_end_blastout[qc_file][f_end] = {}
-           blastout_file = blast(blast_exe, temp_fasta_dir + sep + qc_file, f_end_to_db_loc[f_end], 95, temp_blastout_dir)
+           blastout_file = blast(blast_exe, temp_fasta_dir + sep + qc_file, f_end_to_db_loc[f_end], percent_id, temp_blastout_dir)
            foz_to_end_blastout[qc_file][f_end] = blastout_file
    
    
@@ -603,7 +606,6 @@ def main(argv):
    
    fb_handle = open(output_dir + sep + "fosmidqc_mapping_report" + ".txt", "w")
    
-   line = ""
    line = "Fosmid QC Forward-Backward Hit Mapping:"
    print line
    fb_handle.write(line + "\n")
@@ -664,7 +666,13 @@ def main(argv):
    for i in rename_mapping:
        for j in rename_mapping[i]:
            if len(rename_mapping[i][j]) > 0:
-               line = str(i) + " >" + str(j) + " " + str(rename_mapping[i][j])
+               mapping = ""
+               f_temp = re.match("^(.*?)-",i)
+               if f_temp:
+                  f_temp = f_temp.group(1)
+                  if f_temp in lib_name_maps['library_name_to_external']:
+                     mapping = " (" + str(lib_name_maps['library_name_to_external'][f_temp]) + ") "
+               line = str(i) + mapping + ">" + str(j) + " " + str(rename_mapping[i][j])
                manual_aid.write(line + "\n")
    manual_aid.close()
    
