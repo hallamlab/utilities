@@ -44,6 +44,8 @@ parser.add_argument('-n', dest='naming_file', type=str, nargs='?',
                 required=False, help='name mapping file linking Library_Name, Library FullName, and External_Identifier', default=None)
 parser.add_argument('-p', dest='percent_id', type=str, nargs='?',
                 required=False, help='minimum percent identity cutoff for blast homology searches (default 98)', default='98')
+parser.add_argument('-l', dest='min_length', type=str, nargs='?',
+                required=False, help='minimum length for sequences (default 2000)', default='2000')                
 parser.add_argument('-b', dest='blast_executable', type=str, nargs='?',
                 required=False, help='location of the blastn executable, will assume in PATH if not specified', default='blastn')
 parser.add_argument('-f', dest='database_executable', type=str, nargs='?',
@@ -208,7 +210,7 @@ fosmid_lengths = {} # lengths of all fosmids
 xout_lengths = {} # lengths of all processed xout fosmids
 
 
-def remove_primer_sequences(fasta_to_blastout, length_cutoff = 500):
+def remove_primer_sequences(fasta_to_blastout, length_cutoff = 2000):
     for fasta in fasta_to_blastout:
         try:
             blast_handle = open(fasta_to_blastout[fasta], 'r')
@@ -565,7 +567,7 @@ def main(argv):
        fasta_to_blastout_remove[f] = blastout_file
    
    # finish the xout step
-   remove_primer_sequences(fasta_to_blastout_remove)
+   remove_primer_sequences(fasta_to_blastout_remove, int(args['min_length']))
    
    # clean up temp_blastout, temp_blastdb
    clean_dir(temp_blastdb_dir)
@@ -615,7 +617,6 @@ def main(argv):
        f_temp = re.match("^(.*?)-",i)
        if f_temp:
           f_temp = f_temp.group(1)
-          print f_temp
           if f_temp in lib_name_maps['library_name_to_external']:
               line = line + " (" + str(lib_name_maps['library_name_to_external'][f_temp]) + ")"
        print line
