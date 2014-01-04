@@ -1,3 +1,6 @@
 temp*
 data/
 workspace/
+.dropbox
+.gitignore
+Icon*
