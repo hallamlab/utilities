@@ -20,11 +20,15 @@ what_i_do = "I'm a script that does something"
 parser = argparse.ArgumentParser(description=what_i_do)
 # add arguments to the parser
 parser.add_argument('--ncbi_node', dest='ncbi_node', type=str, nargs=1,
-                required=True, help='a selection of one or many input .fasta files (required)', default=None)
+                required=False, help='a selection of one or many input .fasta files (required)', default=None)
 parser.add_argument('--ncbi_name', dest='ncbi_name', type=str, nargs=1,
                required=False, help='the name of the output frequeny matrix (required)', default=None)
 parser.add_argument('--megan_lvl_map', dest='megan_lvl_map', type=str, nargs=1,
               required=False, help='the name of the output frequeny matrix (required)', default=None)
+parser.add_argument('--megan_tree', dest='megan_tree', type=str, nargs=1,
+              required=False, help='the name of the output frequeny matrix (required)', default=None)
+parser.add_argument('--megan_map', dest='megan_map', type=str, nargs=1,
+                required=False, help='the name of the output frequeny matrix (required)', default=None)
 
 def process_ncbi(ncbi_node_file, ncbi_name_file, megan_lvl_map):
     
@@ -72,11 +76,26 @@ def process_ncbi(ncbi_node_file, ncbi_name_file, megan_lvl_map):
     outfile.close()
     megan_map_out.close()
 
+# process megan_map functionality
+def process_megan_tree(megan_tree_file, megan_map_file, nodes_to_add = None):
+    print "in process_megan_tree"
+    meganTree = None
+    lca = LCAComputation(megan_tree_file)
+    # 1. create tree structure from megan newick format
+    
+    # 2. add nodes to tree if possible
+    
+    # 3. write tree back out into newick format for megan
+    
+    
 # the main function
 def main():
     # parse arguments
     args = vars(parser.parse_args())
     
+    if args['megan_tree'] != None and args['megan_map'] != None:
+        process_megan_tree(args['megan_tree'][0], args['megan_map'])
+    exit()
     # read NCBI node file (nodes.dmp)
     process_ncbi(args['ncbi_node'][0],args['ncbi_name'][0],args['megan_lvl_map'][0])
     

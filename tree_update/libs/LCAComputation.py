@@ -13,7 +13,23 @@ class LCAComputation:
        taxonomy_file = open(filename, 'r')
        lines = taxonomy_file.readlines()
        taxonomy_file.close()
-
+       
+       # if input in newick format
+       
+       left = []
+       right = 
+       
+       line = ''.join(lines) # join to all one line
+       parse_newick(line):
+          for c in line:
+              
+       for line in lines:
+           for c in line:
+               if c == "(":
+                   print c
+       
+       exit()
+       # if taxonomy_file is NCBI
        for line in lines:
           if self.begin_pattern.search(line):
               continue
@@ -24,7 +40,10 @@ class LCAComputation:
           self.id_to_name[str(fields[1])] = str(fields[0])
           self.taxid_to_ptaxid[str(fields[1])] = [ str(fields[2]), 0]
 
-
+    def parse_newick(c):
+        
+    
+    
     def sizeTaxnames(self ):
          return len(self.name_to_id)
 
