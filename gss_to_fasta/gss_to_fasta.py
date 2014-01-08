@@ -51,8 +51,8 @@ def check_arguments(arguments):
             sys.exit(1) 
     if arguments.input_files == None:
         print """REQUIRED: You must have at least one input file"""
-    if arguments.input_files == None:
-        print """REQUIRED: You must have an output file"""
+    if arguments.output_dir == None:
+        print """REQUIRED: You must have an output direcotry"""
     
 def write_to_csv(counted_dictionary, taxa_list, output_file_name):
 
@@ -105,7 +105,6 @@ def gss_to_fasta(input_files):
         lines = handle.readlines()
         handle.close()
 
-
         # open output file
         out_handle = open(i.replace(".gss", "") + ".fasta", "w")
         
@@ -132,15 +131,8 @@ def gss_to_fasta(input_files):
                 i.replace(".gss", ".fasta")
             if collect:
                 current_sequence.append(j)
-                
-                
-                
+
         out_handle.close()        
-                
-            
-        
-                
-                       
 
 
 # the main function

@@ -61,7 +61,6 @@ class LCAComputation:
           return None
        return self.taxid_to_ptaxid[ID][0]
 
-
     def get_lca(self, IDs):
         limit = len(IDs)
         for id in IDs:
@@ -84,16 +83,13 @@ class LCAComputation:
                tid = self.taxid_to_ptaxid[tid][0]
         return ""
 
-
     def getTaxonomy(self, name_groups):
-
          IDs = []
          for name_group in name_groups:
             #print name_group
             id = self.get_a_Valid_ID(name_group)
             if id!=-1:
               IDs.append(id)
-    
          consensus = self.get_lca(IDs)
          #print "=============="
          self.clear_cells(IDs)
