@@ -29,38 +29,43 @@ except:
 what_i_do = "Parses blastout/blastout.parsed files and formats them as csv files for import into MEGAN"
 parser = argparse.ArgumentParser(description=what_i_do)
 # add arguments to the parser
-parser.add_argument('-i', dest='input_file', type=str, nargs='?',
+parser.add_argument('-i', dest='input_files', type=str, nargs='+',
                 required=True, help='the input file to be parsed', default=None)                
-parser.add_argument('-o', dest='output_csv', type=str, nargs='?',
-                required=True, help='the output csv file to be created', default=None)
-
+parser.add_argument('-o', dest='output_dir', type=str, nargs='?',
+                required=True, help='directory where results will be output', default=os.getcwd())
+parser.add_argument('--dsv', dest='dsv', action='store_true',
+                required=False, help='flag to output a dsv file', default=False)
 
 def main(argv):
     args = vars(parser.parse_args())
     
-    input_filename = args['input_file']
-    output_filename = args['output_csv']
-    file_handle = open(input_filename, "r")
+    # setup input and output file_names
+    input_files = args['input_files']
+    output_dir = os.path.abspath(args['output_dir'])
+    
+    for f in input_files:
+        file_handle = open(f, "r")
+        lines = file_handle.readlines()
+        file_handle.close()
+        brackets_pattern = re.compile("\[(.*?)\]")
+        
+        end = ".csv"
+        if args['dsv']:
+            end = ".dsv"
+        output_file = [output_dir, os.sep, os.path.basename(f), ".megan", end]
+        output_handle = open("".join(output_file), "w")
 
-    lines = file_handle.readlines()
+        for l in lines:
+        	fields = l.split("\t")
+        	hits = brackets_pattern.search(fields[8])
+        	if hits:
+        	   read = fields[0]
+        	   last_score = fields[2]
+        	   taxa = hits.group(1)
+        	   out_line = read + ", " + taxa + ", " + last_score + "\n"
+        	   output_handle.write(out_line)
 
-    file_handle.close()
-
-    brackets_pattern = re.compile("\[(.*?)\]")
-
-    output_handle = open(output_filename, "w")
-
-    for l in lines:
-    	fields = l.split("\t")
-    	hits = brackets_pattern.search(fields[8])
-    	if hits:
-    	   read = fields[0]
-    	   last_score = fields[2]
-    	   taxa = hits.group(1)
-    	   out_line = read + ", " + taxa + ", " + last_score + "\n"
-    	   output_handle.write(out_line)
-
-    output_handle.close()
+        output_handle.close()
 
     exit()
 

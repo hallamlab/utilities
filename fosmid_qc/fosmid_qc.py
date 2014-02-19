@@ -432,7 +432,7 @@ def all_fosmidqc_report(final_mapping):
            f_temp = f_temp.group(1)
            if f_temp in lib_name_maps['library_name_to_external']:
                line = line + " (" + str(lib_name_maps['library_name_to_external'][f_temp]) + ")"
-       line = line + " (" + str(len(xout_lengths[f])) + " sequence(s)):" 
+       line = line + " (" + str(len(xout_lengths[f])) + " contig(s)):" 
        print line
        results_handle.write(line + "\n")
        for n in xout_lengths[f]:
