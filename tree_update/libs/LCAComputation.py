@@ -5,7 +5,6 @@ import sys
 
 class LCAComputation:
     begin_pattern = re.compile("#")
-
     name_to_id={}
     id_to_name={}
     taxid_to_ptaxid = {}
@@ -16,19 +15,19 @@ class LCAComputation:
        
        # if input in newick format
        
-       left = []
-       right = 
-       
-       line = ''.join(lines) # join to all one line
-       parse_newick(line):
-          for c in line:
-              
-       for line in lines:
-           for c in line:
-               if c == "(":
-                   print c
-       
-       exit()
+       # left = []
+       # # right = 
+       # 
+       # line = ''.join(lines) # join to all one line
+       # parse_newick(line):
+       #    for c in line:
+       #        
+       # for line in lines:
+       #     for c in line:
+       #         if c == "(":
+       #             print c
+       # 
+       # exit()
        # if taxonomy_file is NCBI
        for line in lines:
           if self.begin_pattern.search(line):
@@ -40,9 +39,8 @@ class LCAComputation:
           self.id_to_name[str(fields[1])] = str(fields[0])
           self.taxid_to_ptaxid[str(fields[1])] = [ str(fields[2]), 0]
 
-    def parse_newick(c):
-        
-    
+    # def parse_newick(c):
+    #     
     
     def sizeTaxnames(self ):
          return len(self.name_to_id)
