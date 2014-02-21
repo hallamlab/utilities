@@ -84,6 +84,10 @@ def main():
   num = ""
   char_old = None
   char = None
+  tree_buff.seek(0, os.SEEK_END)
+  length = tree_buff.tell()
+  
+  temp_out = open("rev", "w")
   for i in range(length, 0, -1):
       tree_buff.seek(i-1,0)
       char = tree_buff.read(1)
@@ -93,36 +97,56 @@ def main():
              # reset number
              num = ""
              num_flag = True
-          num = num + char
+          num = char + num
       else:
-          if new_num:
+          if num_flag:
+              # string[::-1] # python way to reverse a string
+              # print num
               # check if number equals our search candiate
               if num in positions:
-                  if char_old == "(" or char_old == ",":
+                  if char == "(" or char == ",":
                       # no children: print to the left with parenthesis
-                      l = "(" + str(parent_to_new[num]) + ")" + num
-                      sys.stdout.write(l)
-                  elif char_old == ")":
+                      l = char + "(" + str(parent_to_new[num]) + ")" + num
+                      temp_out.write(l[::-1])
+                  elif char == ")":
                       # children: place into children
-                      l = "," + str(parent_to_new[num]) + ")" + num
-                      sys.stdout.write(l)
-                  # print tree_buff.tell()
+                      l = "," + str(parent_to_new[num]) + char + num
+                      temp_out.write(l[::-1])
+                  num = ""
+                  num_flag = False
               else:
-                  l = num
-                  sys.stdout.write(l)
-          # reset the number
-          background = background + char
-          num = ""
-          num_flag = False
-          char_old = char # remember 
+                  l = char + num
+                  temp_out.write(l[::-1])
+                  num = ""
+                  num_flag = False
+          else:
+              # reset the number
+              temp_out.write(char)
+              num = ""
+              num_flag = False
+  
+  # TODO: test this corner case
   if num in positions:
       print num
-      print tree_buff.tell()
+  
+  tree_buff.close()
+  temp_out.close()
   print "Done."
   
-  # for p in positions:
-  #     tree_buff.seek(p-10)
-  #     print tree_buff.read(20)
+  rev_handle = open("rev", "rb")
+  out_handle = open("out", "w")
+  
+  rev_handle.seek(0, os.SEEK_END)
+  length = rev_handle.tell()
+  for i in range(length, 0, -1):
+      rev_handle.seek(i-1,0)
+      char = rev_handle.read(1)
+      out_handle.write(char)
+  rev_handle.close()
+  out_handle.close()
+  
+  # remove the reversed file
+  os.remove("rev")
   
   exit()
 
