@@ -1,4 +1,5 @@
 #!usr/bin/python
+# Takes correlation table and generates network files (nodes & edges).
 
 
 try:
@@ -25,8 +26,12 @@ parser.add_argument('-o', dest='output_dir', type=str, nargs='?',
                 required=False, help='result directory where results are placed', default=os.getcwd())
 parser.add_argument('--full', dest='full', action='store_true',
                 required=False, help='flag to calculate the full matrix', default=False)              
-parser.add_argument('--cutoff', dest='cor_cutoff', type=str, nargs='?',
-                required=False, help='absolute correlation cuttoff (default |0.3|)', default=0.3)         
+parser.add_argument('--cor_cutoff', dest='cor_cutoff', type=str, nargs='?',
+                required=False, help='absolute correlation cuttoff (default |0.3|)', default=0.3)
+parser.add_argument('--pval', dest='pval_file', type=str, nargs='?',
+                    required=False, help='corresponding matrix of pvalues', default=None)
+parser.add_argument('--pval_cutoff', dest='pval_cutoff', type=str, nargs='?',
+                    required=False, help='pval cuttoff (default <0.05)', default=0.05)
                 
 def main(argv):
     # get arguments
@@ -53,26 +58,57 @@ def main(argv):
         nodes_out.close() # close node file
         
         # write the edge header
-        edge_header = "from" + "\t" + "to" + "\t" + "corr" + "\n"
+        edge_header = "from" + "\t" + "to" + "\t" + "corr"
+        if args["pval_file"]:
+           edge_header = edge_header + "\t" + "pval"
+        
+        edge_header = edge_header + "\n"
         edges_out.write(edge_header)
+        
+        pval_lines = None
+        
+        if args["pval_file"]:
+            pval_file_handle = open(args["pval_file"], "r")
+            pval_lines = pval_file_handle.readlines()
+            pval_file_handle.close()
         
         # for each line in the file
         for i in range(1,len(lines)):
             fields = lines[i].split("\t")
+            if args["pval_file"]:
+                p_fields = pval_lines[i].split("\t")
             if args["full"]:
                 # creates an edge for all values in the matrix
                 for j in range(1,len((fields))):
                     if abs(float(fields[j].strip("\n").strip())) > abs(float(args["cor_cutoff"] )):
-                        edge_out_line = fields[0].strip("\n").strip() + "\t" + header[j].strip("\n").strip() + "\t" + fields[j].strip("\n").strip() + "\n"
+                        edge_out_line = fields[0].strip("\n").strip() + "\t" + \
+                                        header[j].strip("\n").strip() + "\t" + \
+                                        fields[j].strip("\n").strip()
+                        if args["pval_file"]:
+                            if (float(p_fields[j].strip("\n").strip()) <= float(args["pval_cutoff"])):
+                                edge_out_line = edge_out_line + "\t" + p_fields[j].strip("\n").strip()
+                            else:
+                                # bail!
+                                continue
+                        edge_out_line = edge_out_line + "\n"
                         edges_out.write(edge_out_line)
             else:
                 # just calculate the upper triangular
                 for j in range(i, len((fields))):
                     if abs(float(fields[j].strip("\n").strip())) > abs(float(args["cor_cutoff"] )):
-                        edge_out_line = fields[0].strip("\n").strip() + "\t" + header[j].strip("\n").strip() + "\t" + fields[j].strip("\n").strip() + "\n"
+                        edge_out_line = fields[0].strip("\n").strip() + "\t" + \
+                            header[j].strip("\n").strip() + "\t" + \
+                            fields[j].strip("\n").strip()
+                        if args["pval_file"]:
+                            if (float(p_fields[j].strip("\n").strip()) <= float(args["pval_cutoff"])):
+                                edge_out_line = edge_out_line + "\t" + p_fields[j].strip("\n").strip()
+                            else:
+                                # bail!
+                                continue
+                        edge_out_line = edge_out_line + "\n"
                         edges_out.write(edge_out_line)
-        
-        # close edges file        
+
+        # close edges file
         edges_out.close()
     
     exit()
