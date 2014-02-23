@@ -1,0 +1,19 @@
+Acidobacteria
+Actinobacteria
+Bacteroidetes
+Candidate division BRC1 
+Chlamydiae
+Chloroflexi
+Cyanobacteria
+Elusimicrobia
+Euryarchaeota
+Firmicutes
+Fusobacteria
+Gemmatimonadetes
+Lentisphaerae
+Nitrospirae
+Opisthokonta
+Planctomycetes
+Proteobacteria
+Synergistetes
+Verrucomicrobia
