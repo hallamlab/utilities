@@ -49,7 +49,7 @@ parser.add_argument('-l', dest='min_length', type=str, nargs='?',
 parser.add_argument('-b', dest='blast_executable', type=str, nargs='?',
                 required=False, help='location of the blastn executable, will assume in PATH if not specified', default='blastn')
 parser.add_argument('-f', dest='database_executable', type=str, nargs='?',
-                required=False, help='location of the makeblastdb executable, will assume in PATH if not specified', default='makeblastdb')                               
+                required=False, help='location of the makeblastdb executable, will assume in PATH if not specified', default='makeblastdb')
                
 def check_arguments(args):
    if args['input_fastas'] == None or args['output_directory'] == None or args['remove_me_fasta'] == None:
@@ -644,7 +644,6 @@ def main(argv):
    fb_handle.close()
    # create qc_fosmids
    rename_writeout_fosmids(rename_mapping)
-   
    manual_aid = open(output_dir + sep + "fosmidqc_manual_aid_report" + ".txt", "w")
    line = "Fosmid QC Manual Aid Report:"
    rename_mapping = {}
