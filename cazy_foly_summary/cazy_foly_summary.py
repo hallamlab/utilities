@@ -94,20 +94,13 @@ def parse_cazy(cazy_file, num_hits):
 
 # given the location of the BLAST directory it will find all parsed output files with
 # CAZy in the file name
-def parse_cazy_families(base_dir, num_hits):
+def parse_cazy_families(files, num_hits):
     
     # isolate parsed CAZy files from the BLAST directory
-    blast_dir = "/blast_results/"
-    dir_list = get_directories(base_dir)
     cazy_file_list = {}
-    for d in dir_list:
-        cazy_file_list[d] = []
-        file_list = get_files(base_dir + "/" + d + "/" + blast_dir)
-        # find all the parsed lists
-        
-        for f in file_list:
-            if ( re.match(".*cazy.*", f, re.IGNORECASE) and re.match(".*blastout\.parsed.*", f, re.IGNORECASE)):
-                cazy_file_list[d].append(d + blast_dir + f)
+    for f in files:
+        if ( re.match(".*cazy.*", f, re.IGNORECASE) and re.match(".*blastout\.parsed.*", f, re.IGNORECASE)):
+            cazy_file_list[d].append(d + blast_dir + f)
     
     # parse families for each sample
     cazy_results = {}
@@ -234,7 +227,7 @@ def write_results(cazy_results, foly_results, output_file):
 # the main function
 def main(argv): 
     # grab and check arguments
-    (opts, args) = parser.parse_args() 
+    (opts, args) = parser.parse_args()
     if not check_arguments(opts, args):
        print usage
        sys.exit(0)

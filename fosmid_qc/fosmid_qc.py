@@ -50,6 +50,8 @@ parser.add_argument('-b', dest='blast_executable', type=str, nargs='?',
                 required=False, help='location of the blastn executable, will assume in PATH if not specified', default='blastn')
 parser.add_argument('-f', dest='database_executable', type=str, nargs='?',
                 required=False, help='location of the makeblastdb executable, will assume in PATH if not specified', default='makeblastdb')
+parser.add_argument('--qc', dest='just_qc', action='store_true',
+                required=False, help='flag to exit after the QC step', default=False)
                
 def check_arguments(args):
    if args['input_fastas'] == None or args['output_directory'] == None or args['remove_me_fasta'] == None:
@@ -568,6 +570,9 @@ def main(argv):
    
    # finish the xout step
    remove_primer_sequences(fasta_to_blastout_remove, int(args['min_length']))
+   
+   if args['just_qc']:
+       exit()
    
    # clean up temp_blastout, temp_blastdb
    clean_dir(temp_blastdb_dir)

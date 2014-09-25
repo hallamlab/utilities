@@ -1,0 +1,1 @@
+python MetaPathways_extract_pathways.py -o /tmp/test_table.txt -p e4093112_combined_unique -t /Users/nielsh/pathway-tools-17/pathway-tools/pathway-tools --wtd --annotation-table resources/functional_and_taxonomic_table.txt --ncbi-tree resources/ncbi_taxonomy_tree.txt --ncbi-megan-map resources/ncbi.map
